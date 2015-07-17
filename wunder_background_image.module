@@ -1,0 +1,81 @@
+<?php
+/**
+ * @file
+ * Code for the wunder_background_image feature.
+ */
+
+include_once 'wunder_background_image.features.inc';
+
+function wunder_background_image_preprocess_page(&$variables) {
+  drupal_add_js(drupal_get_path('module', 'cs_adaptive_image') . '/cs_adaptive_image.js', 'file');
+}
+
+function wunder_background_image_page_alter(&$page) {
+  $page['#post_render'][] = 'wunder_background_image_placebg';
+}
+
+function wunder_background_image_placebg(&$children, $elements) {
+
+  $path = drupal_get_path_alias();
+  //krumo($path);
+  /* Return node object with background image */
+  //$bg_node = wunder_background_image_background_node($path);
+
+  // Return all nids of nodes of type "page".
+  $nids = db_select('node', 'n')
+  ->fields('n', array('nid'))
+  ->fields('n', array('type'))
+  ->condition('n.type', 'background_image')
+  ->execute()
+  ->fetchCol(); // returns an indexed array
+  // Now return the node objects.
+  $bg_nodes = node_load_multiple($nids);
+
+  foreach ($bg_nodes as $key => $node) {
+    $items = field_get_items('node', $node, 'field_visibility');
+    
+    if(drupal_match_path($path, $items[0]['value'])){
+      $bg_node = $node;
+      break;
+    }
+  }
+
+  if(!empty($bg_node)){
+
+    $fields_bg = field_get_items('node', $bg_node, 'field_bg_image');
+    $fields_selector = field_get_items('node', $bg_node, 'field_selector');
+    $fields_css = field_get_items('node', $bg_node, 'field_css_settings');
+
+    $bg_output = field_view_value('node', $bg_node, 'field_bg_image', $fields_bg[0], 'default');
+    $selector_output = field_view_value('node', $bg_node, 'field_selector', $fields_selector[0], 'default');
+    $css_output = field_view_value('node', $bg_node, 'field_selector', $fields_css[0], 'default');
+
+    $style = drupal_render($css_output);
+    $bg = '<div class="bg-image" style="'.$style.'">'.drupal_render($bg_output).'</div>';
+    $selector = drupal_render($selector_output);
+
+    if($selector > ''){
+      $children = preg_replace('@<.*?class="(.*?'.$selector.'.*?)"*>@', '$0' . $bg, $children, 1);
+    } else {
+      $children = preg_replace('@<body[^>]*>@', '$0' . $bg, $children, 1);
+    }
+
+  }
+
+  return $children;
+}
+
+function wunder_background_image_background_node($url='') {
+
+  $query = db_select('field_data_field_visibility', 'map')
+  ->fields('map', array('entity_id'))
+  ->where(':url LIKE map.field_visibility_value', array(':url'=>$url))
+  ->orderBy('LENGTH(field_visibility_value)', 'DESC');
+  $results = $query->execute();
+
+  if ($first = $results->fetchAssoc()) {
+    $node = node_load($first['entity_id']);
+    return $node;
+  }
+  
+}
