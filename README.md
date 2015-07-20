@@ -2,11 +2,11 @@
 
 ## Dependencies ##
 
-Feature module drupal.org/project/features
+Feature module http://drupal.org/project/features
 
 ## Recommended ##
 
-Client-side adaptive image module drupal.org/project/cs_adaptive_image
+Client-side adaptive image module http://drupal.org/project/cs_adaptive_image
 
 ## Usage ##
 
